@@ -19,6 +19,9 @@ const float matrix[25] = float[25](
     -0.30,  0.20, -0.20,  0.60,  0.10    // Type 4
 );
 
+// Per-species scale: affects visual size AND interaction radii
+const float scales[5] = float[5](0.8, 1.0, 0.6, 1.2, 0.9);
+
 void main() {
     const uint id = TDIndex();
     if (id >= TDNumElements())
@@ -27,6 +30,7 @@ void main() {
     vec3 pos = TDIn_P().xyz;
     vec3 velocity = TDIn_vel().xyz;
     uint myType = id % NUM_TYPES;
+    float myScale = scales[myType];
 
     float rMax        = uRMax;
     float friction    = uFriction;
@@ -45,6 +49,7 @@ void main() {
 
         vec3 nebrPos = TDIn_P(0u, nebrIdx, 0u).xyz;
         uint nebrType = nebrIdx % NUM_TYPES;
+        float pairScale = 0.5 * (myScale + scales[nebrType]);
 
         vec3 diff = nebrPos - pos;
         // Wrap-around shortest distance
@@ -54,12 +59,13 @@ void main() {
         if (diff.y < -by) diff.y += 2.0 * by;
 
         float dist = length(diff);
-        if (dist < 0.0001 || dist > rMax) continue;
+        float pairRMax = rMax * pairScale;
+        if (dist < 0.0001 || dist > pairRMax) continue;
 
         float g = matrix[myType * NUM_TYPES + nebrType];
 
         // g/d force with capped core: prevents divergence at close range
-        float coreR = repCore * rMax;
+        float coreR = repCore * pairRMax;
         // Cap attraction: g/max(dist, coreR) — force plateaus inside core
         float attract = g / max(dist, coreR);
         // Universal repulsion inside core: pushes apart when too close
@@ -87,7 +93,5 @@ void main() {
     // Sample ramp texture by species ID
     float t = float(myType) / float(NUM_TYPES - 1u);
     Color[id] = textureLod(sRamp, vec2(t, 0.5), 0.0);
-    // Per-species size variation
-    const float scales[5] = float[5](0.8, 1.0, 0.6, 1.2, 0.9);
-    PointScale[id] = scales[myType];
+    PointScale[id] = myScale;
 }
