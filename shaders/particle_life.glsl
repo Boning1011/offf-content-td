@@ -82,6 +82,16 @@ void main() {
     pos.y = mod(pos.y + by, 2.0 * by) - by;
     pos.z = 0.0;
 
+    // Species colors
+    const vec4 speciesColors[5] = vec4[5](
+        vec4(1.0, 0.2, 0.2, 1.0),   // Type 0: red
+        vec4(0.2, 1.0, 0.3, 1.0),   // Type 1: green
+        vec4(0.3, 0.4, 1.0, 1.0),   // Type 2: blue
+        vec4(1.0, 0.9, 0.2, 1.0),   // Type 3: yellow
+        vec4(0.9, 0.3, 1.0, 1.0)    // Type 4: magenta
+    );
+
     P[id] = pos;
     vel[id] = velocity;
+    Color[id] = speciesColors[myType];
 }
