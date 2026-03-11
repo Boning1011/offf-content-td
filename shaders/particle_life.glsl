@@ -74,5 +74,5 @@ void main() {
 
     P[id] = pos;
     vel[id] = velocity;
-    col[id] = typeColors[myType];
+    Cd[id] = typeColors[myType];
 }
