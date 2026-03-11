@@ -2,6 +2,9 @@
 // Chain: feedback(target=glsl) -> neighbor -> glsl
 // vel: read TDIn_ from input (feedback), write to created attr
 // Force model: g/d (WebGL-style) with soft repulsion core
+//
+// Uniforms (each is a separate float slider on the Vectors page):
+//   uRMax, uFriction, uRepCore, uForce, uDt, uBoundsX, uBoundsY
 
 const uint NUM_TYPES = 5u;
 
@@ -25,13 +28,13 @@ void main() {
     vec3 velocity = TDIn_vel().xyz;
     uint myType = id % NUM_TYPES;
 
-    float rMax        = uParams.x;
-    float friction    = uParams.y;
-    float repCore     = uParams.z;   // soft repulsion core radius (fraction of rMax)
-    float forceFactor = uParams.w;
-    float dt          = uTime.x;
-    float bx          = uBounds.x;
-    float by          = uBounds.y;
+    float rMax        = uRMax;
+    float friction    = uFriction;
+    float repCore     = uRepCore;     // soft core radius (fraction of rMax)
+    float forceFactor = uForce;
+    float dt          = uDt;
+    float bx          = uBoundsX;
+    float by          = uBoundsY;
 
     uint numN = TDIn_NumNebrs();
     vec3 totalForce = vec3(0.0);
@@ -70,7 +73,7 @@ void main() {
 
     // Apply force
     velocity += totalForce * forceFactor * dt;
-    // Frame-rate independent friction: vel *= friction^(dt*60)
+    // Frame-rate independent friction: vel *= (1-friction)^(dt*60)
     velocity *= pow(1.0 - friction, dt * 60.0);
     pos += velocity * dt;
 
