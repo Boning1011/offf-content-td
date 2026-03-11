@@ -87,4 +87,7 @@ void main() {
     // Sample ramp texture by species ID
     float t = float(myType) / float(NUM_TYPES - 1u);
     Color[id] = textureLod(sRamp, vec2(t, 0.5), 0.0);
+    // Per-species size variation
+    const float scales[5] = float[5](0.8, 1.0, 0.6, 1.2, 0.9);
+    PointScale[id] = scales[myType];
 }
