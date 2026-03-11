@@ -1,24 +1,19 @@
 // Particle Life - 5 species with asymmetric attraction/repulsion
 // Chain: feedback(target=glsl) -> neighbor -> glsl
-// vel/col: read TDIn_ from input (feedback), write to created attrs
+// vel: read TDIn_ from input (feedback), write to created attr
+// Force model: g/d (WebGL-style) with soft repulsion core
 
 const uint NUM_TYPES = 5u;
 
+// Interaction matrix: matrix[myType * NUM_TYPES + nebrType]
+// Positive = attract, negative = repel
 const float matrix[25] = float[25](
     //  T0     T1     T2     T3     T4
-    -0.10,  0.34,  0.10, -0.40,  0.25,   // Type 0 (green)
-     0.40, -0.17, -0.34,  0.10, -0.30,   // Type 1 (red)
-    -0.30,  0.50, -0.10,  0.34,  0.15,   // Type 2 (yellow)
-     0.15, -0.30,  0.40, -0.20, -0.25,   // Type 3 (cyan)
-    -0.20,  0.15, -0.30,  0.50, -0.10    // Type 4 (magenta)
-);
-
-const vec4 typeColors[5] = vec4[5](
-    vec4(0.30, 0.90, 0.40, 1.0),
-    vec4(0.95, 0.25, 0.25, 1.0),
-    vec4(0.95, 0.90, 0.20, 1.0),
-    vec4(0.20, 0.80, 0.95, 1.0),
-    vec4(0.85, 0.30, 0.90, 1.0)
+     0.10,  0.50, -0.20, -0.40,  0.30,   // Type 0
+     0.60, -0.10, -0.40,  0.20, -0.20,   // Type 1
+    -0.40,  0.60,  0.10,  0.40,  0.15,   // Type 2
+     0.20, -0.30,  0.50, -0.15, -0.30,   // Type 3
+    -0.30,  0.20, -0.20,  0.60,  0.10    // Type 4
 );
 
 void main() {
@@ -32,7 +27,7 @@ void main() {
 
     float rMax        = uParams.x;
     float friction    = uParams.y;
-    float repZone     = uParams.z;
+    float repCore     = uParams.z;   // soft repulsion core radius (fraction of rMax)
     float forceFactor = uParams.w;
     float dt          = uTime.x;
     float bx          = uBounds.x;
@@ -49,30 +44,42 @@ void main() {
         uint nebrType = nebrIdx % NUM_TYPES;
 
         vec3 diff = nebrPos - pos;
+        // Wrap-around shortest distance
+        if (diff.x > bx) diff.x -= 2.0 * bx;
+        if (diff.x < -bx) diff.x += 2.0 * bx;
+        if (diff.y > by) diff.y -= 2.0 * by;
+        if (diff.y < -by) diff.y += 2.0 * by;
+
         float dist = length(diff);
         if (dist < 0.0001 || dist > rMax) continue;
 
-        vec3 dir = diff / dist;
-        float nd = dist / rMax;
         float g = matrix[myType * NUM_TYPES + nebrType];
 
-        float f;
-        if (nd < repZone) {
-            f = nd / repZone - 1.0;
+        // Simple g/d force (like WebGL reference) + soft core repulsion
+        float coreR = repCore * rMax;
+        float force;
+        if (dist < coreR) {
+            // Soft repulsion at close range (prevents collapse)
+            force = -1.0 / coreR + g / coreR;
+            force = mix(force, -1.0 / coreR, dist / coreR);
         } else {
-            f = g * (1.0 - abs(2.0 * nd - 1.0 - repZone) / (1.0 - repZone));
+            force = g / dist;
         }
-        totalForce += f * dir;
+
+        totalForce += force * diff / dist;
     }
 
-    velocity = velocity * (1.0 - friction) + totalForce * rMax * forceFactor * dt;
+    // Apply force
+    velocity += totalForce * forceFactor * dt;
+    // Frame-rate independent friction: vel *= friction^(dt*60)
+    velocity *= pow(1.0 - friction, dt * 60.0);
     pos += velocity * dt;
 
+    // Wrap boundaries
     pos.x = mod(pos.x + bx, 2.0 * bx) - bx;
     pos.y = mod(pos.y + by, 2.0 * by) - by;
     pos.z = 0.0;
 
     P[id] = pos;
     vel[id] = velocity;
-    Cd[id] = typeColors[myType];
 }
