@@ -84,7 +84,7 @@ void main() {
 
     P[id] = pos;
     vel[id] = velocity;
-    // Normalized species ID (0..1) for ramp lookup
+    // Sample ramp texture by species ID
     float t = float(myType) / float(NUM_TYPES - 1u);
-    Color[id] = vec4(t, t, t, 1.0);
+    Color[id] = textureLod(sRamp, vec2(t, 0.5), 0.0);
 }
