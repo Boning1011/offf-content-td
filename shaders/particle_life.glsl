@@ -55,16 +55,15 @@ void main() {
 
         float g = matrix[myType * NUM_TYPES + nebrType];
 
-        // Simple g/d force (like WebGL reference) + soft core repulsion
+        // g/d force with capped core: prevents divergence at close range
         float coreR = repCore * rMax;
-        float force;
-        if (dist < coreR) {
-            // Soft repulsion at close range (prevents collapse)
-            force = -1.0 / coreR + g / coreR;
-            force = mix(force, -1.0 / coreR, dist / coreR);
-        } else {
-            force = g / dist;
-        }
+        // Cap attraction: g/max(dist, coreR) — force plateaus inside core
+        float attract = g / max(dist, coreR);
+        // Universal repulsion inside core: pushes apart when too close
+        float repulse = (dist < coreR)
+            ? -(1.0 - dist / coreR) / coreR
+            : 0.0;
+        float force = attract + repulse;
 
         totalForce += force * diff / dist;
     }
