@@ -1,5 +1,10 @@
-// DLA with aggressive tip enhancement for dendritic branching
-// Key insight: stickiness must be EXTREMELY low to prevent wall-advance
+// DLA - Diffusion Limited Aggregation with tip enhancement
+//
+// Uniforms (Vectors page on GLSL POP):
+//   uTime.x    = frame counter
+//   uParams    = (stickiness, stepSize, seedRadius, tipPower)
+//   uBounds    = (halfW, halfH, walkAlpha, noiseStrength)
+//   uScale     = (scaleMin, scaleRange, walkScaleMult, zDepth)
 
 void main() {
     const uint id = TDIndex();
@@ -11,13 +16,26 @@ void main() {
     float ft = TDIn_freezeTime();
     float frame = uTime.x;
 
-    float halfW = 0.5;
-    float halfH = 1.0;
+    // Unpack uniforms
+    float stickiness   = uParams.x;
+    float stepSize     = uParams.y;
+    float seedRadius   = uParams.z;
+    float tipPower     = uParams.w;
 
-    // Per-particle scale
+    float halfW        = uBounds.x;
+    float halfH        = uBounds.y;
+    float walkAlpha    = uBounds.z;
+    float noiseStr     = uBounds.w;
+
+    float scaleMin     = uScale.x;
+    float scaleRange   = uScale.y;
+    float walkScaleMul = uScale.z;
+    float zDepth       = uScale.w;
+
+    // Per-particle scale variation
     uint scaleHash = id * 2654435761u;
     scaleHash ^= scaleHash >> 16u;
-    float pScale = 0.6 + float(scaleHash & 0xFFFFu) / 65535.0 * 0.8;
+    float pScale = scaleMin + float(scaleHash & 0xFFFFu) / 65535.0 * scaleRange;
 
     // --- Sparse seeds: corners + mid-edges ---
     if(isFrozen < 0.5) {
@@ -34,7 +52,7 @@ void main() {
         );
         float minD = 999.0;
         for(int i = 0; i < 8; i++) minD = min(minD, seeds[i]);
-        if(minD < 0.015) {
+        if(minD < seedRadius) {
             P[id] = pos;
             frozen[id] = 1.0;
             freezeTime[id] = 0.0;
@@ -44,6 +62,7 @@ void main() {
         }
     }
 
+    // Already frozen
     if(isFrozen > 0.5) {
         P[id] = pos;
         frozen[id] = 1.0;
@@ -62,13 +81,12 @@ void main() {
     seed = seed * 1099087573u + 12345u;
     float rz = float(seed & 0xFFFFu) / 65535.0 - 0.5;
 
-    float stepSize = 0.008;
     vec3 newPos = pos + vec3(rx, ry, rz) * stepSize;
     newPos.x = clamp(newPos.x, -halfW, halfW);
     newPos.y = clamp(newPos.y, -halfH, halfH);
-    newPos.z = clamp(newPos.z, -0.025, 0.025);
+    newPos.z = clamp(newPos.z, -zDepth, zDepth);
 
-    // Noise
+    // Noise modulation
     vec2 uv = vec2((pos.x + halfW) / (2.0 * halfW),
                     (pos.y + halfH) / (2.0 * halfH));
     float noiseVal = textureLod(sNoise, uv, 0.0).r;
@@ -85,12 +103,9 @@ void main() {
 
     bool shouldFreeze = false;
     if(frozenCount > 0u) {
-        // Extreme tip enhancement with very low base rate
-        // 1 frozen neighbor (pure tip): 0.5%
-        // 2 frozen neighbors: 0.125%
-        // 3+: essentially 0
-        float exposure = 1.0 / (float(frozenCount) * float(frozenCount) * float(frozenCount));
-        float stickChance = 0.005 * exposure * (0.2 + noiseVal * 1.6);
+        // Tip enhancement: fewer frozen neighbors = more exposed = sticks easier
+        float exposure = 1.0 / pow(float(frozenCount), tipPower);
+        float stickChance = stickiness * exposure * (0.2 + noiseVal * noiseStr);
 
         uint stickSeed = id * 374761393u + uint(frame) * 668265263u;
         stickSeed ^= stickSeed >> 15u;
@@ -107,11 +122,10 @@ void main() {
         PointScale[id] = pScale;
         Color[id] = vec4(1.0, 1.0, 1.0, 1.0);
     } else {
-        float a = 0.03;
         P[id] = newPos;
         frozen[id] = 0.0;
         freezeTime[id] = 0.0;
-        PointScale[id] = pScale * 0.5;
-        Color[id] = vec4(a, a, a, a);
+        PointScale[id] = pScale * walkScaleMul;
+        Color[id] = vec4(walkAlpha, walkAlpha, walkAlpha, walkAlpha);
     }
 }
