@@ -20,8 +20,8 @@ void main()
     float timer;
 
     if (current > 0.5) {
-        // Source is ON: show white, reset timer
-        display = 1.0;
+        // Source is ON: alternating 0/1 stripe instead of solid white
+        display = float(coord.x % 2);
         timer = 1.0;
     } else if (prevTimer > 0.01) {
         // Source is OFF but timer still running: flicker-decay
