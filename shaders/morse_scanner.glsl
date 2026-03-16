@@ -24,7 +24,16 @@ void main()
     } else {
         // Shift previous frame to the left by per-row speed
         vec4 prev = texture(sTD2DInputs[2], uv + vec2(shift, 0.0));
-        float clean = step(0.5, prev.r);
+
+        // Dither interpolated gray values back to 0/1
+        // 2x2 Bayer threshold so gray areas become sparse/dense dot patterns
+        ivec2 pos = ivec2(gl_FragCoord.xy) % 2;
+        float thr;
+        if (pos.x == 0 && pos.y == 0) thr = 0.125;
+        else if (pos.x == 1 && pos.y == 0) thr = 0.625;
+        else if (pos.x == 0 && pos.y == 1) thr = 0.875;
+        else                                thr = 0.375;
+        float clean = step(thr, prev.r);
         fragColor = TDOutputSwizzle(vec4(vec3(clean), 1.0));
     }
 }
