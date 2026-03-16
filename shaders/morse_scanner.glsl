@@ -24,6 +24,7 @@ void main()
     } else {
         // Shift previous frame to the left by per-row speed
         vec4 prev = texture(sTD2DInputs[2], uv + vec2(shift, 0.0));
-        fragColor = TDOutputSwizzle(prev);
+        float clean = step(0.5, prev.r);
+        fragColor = TDOutputSwizzle(vec4(vec3(clean), 1.0));
     }
 }
