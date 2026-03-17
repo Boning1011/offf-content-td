@@ -1,7 +1,7 @@
-// Brian's Brain CA with tunable birth suppression
+// Brian's Brain CA with kill rate + speed control
 // Input 0: previous state (feedback)
 // Input 1: live input (bright pixels force alive)
-// Input 2: kill rate (red channel 0-1, higher = fewer births = sparser)
+// Input 2: control (R=kill rate, G=frame interval, B=frame counter)
 out vec4 fragColor;
 
 float hash(vec2 p, float seed) {
@@ -15,9 +15,25 @@ void main()
     vec2 uv = vUV.st;
     vec2 px = 1.0 / uTDOutputInfo.res.zw;
 
-    float c = texture(sTD2DInputs[0], uv).r;
-    float killRate = texture(sTD2DInputs[2], vec2(0.5)).r;
+    vec4 prev = texture(sTD2DInputs[0], uv);
+    float c = prev.r;
 
+    // Read control values
+    vec3 ctrl = texture(sTD2DInputs[2], vec2(0.5)).rgb;
+    float killRate = ctrl.r;
+    float interval = max(ctrl.g, 1.0);  // frame interval (1 = every frame)
+    float frame = ctrl.b;
+
+    // Speed control: only compute CA on step frames, otherwise pass through
+    bool isStepFrame = mod(frame, interval) < 1.0;
+
+    if (!isStepFrame) {
+        // Pass through previous state unchanged
+        fragColor = TDOutputSwizzle(prev);
+        return;
+    }
+
+    // --- CA computation (only on step frames) ---
     float s0 = texture(sTD2DInputs[0], uv + vec2(-px.x, -px.y)).r;
     float s1 = texture(sTD2DInputs[0], uv + vec2(   0.0, -px.y)).r;
     float s2 = texture(sTD2DInputs[0], uv + vec2( px.x, -px.y)).r;
@@ -36,13 +52,11 @@ void main()
 
     float result;
     if (c > 0.9) {
-        // alive -> dying (normal Brian's Brain, no change)
-        result = 0.5;
+        result = 0.5;  // alive -> dying
     } else if (c > 0.3) {
-        // dying -> dead
-        result = 0.0;
+        result = 0.0;  // dying -> dead
     } else {
-        // dead -> alive if exactly 2 neighbors AND passes kill check
+        // dead -> alive if 2 neighbors AND passes kill check
         result = (neighbors == 2 && rand > killRate) ? 1.0 : 0.0;
     }
 
