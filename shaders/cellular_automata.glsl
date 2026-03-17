@@ -1,6 +1,8 @@
-// Cellular Automata (Conway's Game of Life) with input override + decay
-// Input 0: previous CA state (from feedback)
-// Input 1: live input (bright pixels override CA)
+// Brian's Brain - 3-state Cellular Automata with input override
+// States: 1.0 = alive, 0.5 = dying, 0.0 = dead
+// Rules: alive->dying, dying->dead, dead->alive if exactly 2 alive neighbors
+// Input 0: previous state (feedback)
+// Input 1: live input (bright pixels force alive)
 out vec4 fragColor;
 
 void main()
@@ -8,42 +10,34 @@ void main()
     vec2 uv = vUV.st;
     vec2 px = 1.0 / uTDOutputInfo.res.zw;
 
-    // Read previous CA state (using brightness as life value)
-    float c = dot(texture(sTD2DInputs[0], uv).rgb, vec3(0.333));
+    float c = texture(sTD2DInputs[0], uv).r;
 
-    // Count 8 neighbors (treat > 0.5 as alive)
+    // Count alive neighbors (only fully alive cells count, not dying)
     float n = 0.0;
-    n += step(0.5, dot(texture(sTD2DInputs[0], uv + vec2(-px.x, -px.y)).rgb, vec3(0.333)));
-    n += step(0.5, dot(texture(sTD2DInputs[0], uv + vec2(   0.0, -px.y)).rgb, vec3(0.333)));
-    n += step(0.5, dot(texture(sTD2DInputs[0], uv + vec2( px.x, -px.y)).rgb, vec3(0.333)));
-    n += step(0.5, dot(texture(sTD2DInputs[0], uv + vec2(-px.x,    0.0)).rgb, vec3(0.333)));
-    n += step(0.5, dot(texture(sTD2DInputs[0], uv + vec2( px.x,    0.0)).rgb, vec3(0.333)));
-    n += step(0.5, dot(texture(sTD2DInputs[0], uv + vec2(-px.x,  px.y)).rgb, vec3(0.333)));
-    n += step(0.5, dot(texture(sTD2DInputs[0], uv + vec2(   0.0,  px.y)).rgb, vec3(0.333)));
-    n += step(0.5, dot(texture(sTD2DInputs[0], uv + vec2( px.x,  px.y)).rgb, vec3(0.333)));
+    n += step(0.9, texture(sTD2DInputs[0], uv + vec2(-px.x, -px.y)).r);
+    n += step(0.9, texture(sTD2DInputs[0], uv + vec2(   0.0, -px.y)).r);
+    n += step(0.9, texture(sTD2DInputs[0], uv + vec2( px.x, -px.y)).r);
+    n += step(0.9, texture(sTD2DInputs[0], uv + vec2(-px.x,    0.0)).r);
+    n += step(0.9, texture(sTD2DInputs[0], uv + vec2( px.x,    0.0)).r);
+    n += step(0.9, texture(sTD2DInputs[0], uv + vec2(-px.x,  px.y)).r);
+    n += step(0.9, texture(sTD2DInputs[0], uv + vec2(   0.0,  px.y)).r);
+    n += step(0.9, texture(sTD2DInputs[0], uv + vec2( px.x,  px.y)).r);
 
     int neighbors = int(n + 0.5);
-    bool alive = c > 0.5;
 
-    // Conway rules
-    float ca;
-    if (alive) {
-        ca = (neighbors == 2 || neighbors == 3) ? 1.0 : 0.0;
-    } else {
-        ca = (neighbors == 3) ? 1.0 : 0.0;
-    }
-
-    // Fade: CA cells lose brightness over time so trails decay
-    // Alive cells start at 0.8 (dimmer than input), dead cells fade out
-    float prev = texture(sTD2DInputs[0], uv).r;
     float result;
-    if (ca > 0.5) {
-        result = max(prev, 0.7);  // CA cells stay visible but dimmer than input
+    if (c > 0.9) {
+        // alive -> dying
+        result = 0.5;
+    } else if (c > 0.3) {
+        // dying -> dead
+        result = 0.0;
     } else {
-        result = prev * 0.92;     // fade out dead cells gradually
+        // dead -> alive if exactly 2 alive neighbors
+        result = (neighbors == 2) ? 1.0 : 0.0;
     }
 
-    // Input override: bright input pixels always on top at full brightness
+    // Input override: bright input pixels force alive
     float input_lum = dot(texture(sTD2DInputs[1], uv).rgb, vec3(0.299, 0.587, 0.114));
     if (input_lum > 0.5) {
         result = 1.0;
