@@ -1,7 +1,7 @@
-// Brian's Brain CA with tunable kill rate
+// Brian's Brain CA with tunable birth suppression
 // Input 0: previous state (feedback)
 // Input 1: live input (bright pixels force alive)
-// Input 2: kill rate control (red channel = kill probability 0-1)
+// Input 2: kill rate (red channel 0-1, higher = fewer births = sparser)
 out vec4 fragColor;
 
 float hash(vec2 p, float seed) {
@@ -36,14 +36,14 @@ void main()
 
     float result;
     if (c > 0.9) {
-        // alive -> dying, random kill skips straight to dead
-        result = (rand < killRate) ? 0.0 : 0.5;
+        // alive -> dying (normal Brian's Brain, no change)
+        result = 0.5;
     } else if (c > 0.3) {
         // dying -> dead
         result = 0.0;
     } else {
-        // dead -> alive if exactly 2 alive neighbors
-        result = (neighbors == 2) ? 1.0 : 0.0;
+        // dead -> alive if exactly 2 neighbors AND passes kill check
+        result = (neighbors == 2 && rand > killRate) ? 1.0 : 0.0;
     }
 
     // Input override
