@@ -20,7 +20,7 @@ void main()
     vec3 color = prev.rgb;
 
     // Read control values
-    vec3 ctrl = texture(sTD2DInputs[2], vec2(0.5)).rgb;
+    vec3 ctrl = texture(sTD2DInputs[2], uv).rgb;
     float killRate = ctrl.r;
     float interval = max(ctrl.g, 1.0);
     float frame = ctrl.b;
