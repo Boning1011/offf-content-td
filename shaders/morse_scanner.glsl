@@ -41,7 +41,7 @@ void main()
             vec4 signal = texture(sTD2DInputs[1], vec2(0.5, uv.y));
             float lum = dot(signal.rgb, vec3(0.299, 0.587, 0.114));
             float morse = step(0.5, lum);
-            fragColor = TDOutputSwizzle(vec4(vec3(morse), 1.0));
+            fragColor = TDOutputSwizzle(vec4(signal.rgb * morse, 1.0));
         } else {
             // Shift pixel in scroll direction
             int offset = (dir < 0.0) ? 1 : -1;
