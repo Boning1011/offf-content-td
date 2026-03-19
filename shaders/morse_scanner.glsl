@@ -47,24 +47,30 @@ void main()
             // Shift pixel in scroll direction
             int offset = (dir < 0.0) ? 1 : -1;
             vec4 prev = texelFetch(sTD2DInputs[0], coord + ivec2(offset, 0), 0);
-            // Probabilistic fade to white — 90s pixel-style sudden jumps
-            float fadeChance = uFadeRate * 0.08;
-            float fadeTick = floor(uFrame / 4.0);
-            float fadeRoll = hash(float(coord.x) * 3.17 + float(coord.y) * 7.23 + fadeTick * 1.31);
-            if (fadeRoll < fadeChance) {
-                prev.rgb = mix(prev.rgb, vec3(1.0), 0.25);
+            // Probabilistic fade to white — only for non-black pixels
+            float prevLum = dot(prev.rgb, vec3(0.299, 0.587, 0.114));
+            if (prevLum > 0.01) {
+                float fadeChance = uFadeRate * 0.08;
+                float fadeTick = floor(uFrame / 4.0);
+                float fadeRoll = hash(float(coord.x) * 3.17 + float(coord.y) * 7.23 + fadeTick * 1.31);
+                if (fadeRoll < fadeChance) {
+                    prev.rgb = mix(prev.rgb, vec3(1.0), 0.25);
+                }
             }
             fragColor = TDOutputSwizzle(prev);
         }
     } else {
         // Don't scroll: hold previous frame
         vec4 prev = texelFetch(sTD2DInputs[0], coord, 0);
-        // Probabilistic fade to white — 90s pixel-style sudden jumps
-        float fadeChance = uFadeRate * 0.08;
-        float fadeTick = floor(uFrame / 4.0);
-        float fadeRoll = hash(float(coord.x) * 3.17 + float(coord.y) * 7.23 + fadeTick * 1.31);
-        if (fadeRoll < fadeChance) {
-            prev.rgb = mix(prev.rgb, vec3(1.0), 0.25);
+        // Probabilistic fade to white — only for non-black pixels
+        float prevLum = dot(prev.rgb, vec3(0.299, 0.587, 0.114));
+        if (prevLum > 0.01) {
+            float fadeChance = uFadeRate * 0.08;
+            float fadeTick = floor(uFrame / 4.0);
+            float fadeRoll = hash(float(coord.x) * 3.17 + float(coord.y) * 7.23 + fadeTick * 1.31);
+            if (fadeRoll < fadeChance) {
+                prev.rgb = mix(prev.rgb, vec3(1.0), 0.25);
+            }
         }
         fragColor = TDOutputSwizzle(prev);
     }
