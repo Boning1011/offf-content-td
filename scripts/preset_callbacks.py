@@ -14,6 +14,9 @@ def onPulse(par):
 		mgr.apply_preset(comp)
 	elif par.name == 'Savepreset':
 		mgr.save_current(comp)
+	elif par.name == 'Clearscreen':
+		for child in ['Side_LED_Effect_1', 'Side_LED_Effect_2']:
+			comp.op(child).par.Clearscreen.pulse()
 	return
 
 # Standard stubs (required by TD)
