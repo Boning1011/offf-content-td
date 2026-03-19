@@ -1,7 +1,7 @@
 {
   "presets": {
     "Intro": {
-      "description": "起 — Slow, sparse, contemplative opening",
+      "description": "Slow, sparse, contemplative opening",
       "Dotspeedscale": 0.25,
       "Dotminspeed": 0.03,
       "Inputprobability": 0.15,
@@ -13,7 +13,7 @@
       "Caupdatebynframes": 10
     },
     "Build": {
-      "description": "承 — Growing energy, medium pace",
+      "description": "Growing energy, medium pace",
       "Dotspeedscale": 0.6,
       "Dotminspeed": 0.08,
       "Inputprobability": 0.35,
@@ -25,7 +25,7 @@
       "Caupdatebynframes": 5
     },
     "Climax": {
-      "description": "转 — Peak intensity, fast and dense",
+      "description": "Peak intensity, fast and dense",
       "Dotspeedscale": 1.0,
       "Dotminspeed": 0.2,
       "Inputprobability": 0.7,
@@ -37,7 +37,7 @@
       "Caupdatebynframes": 2
     },
     "Resolve": {
-      "description": "合 — Fading out, ethereal whites",
+      "description": "Fading out, ethereal whites",
       "Dotspeedscale": 0.35,
       "Dotminspeed": 0.05,
       "Inputprobability": 0.1,
