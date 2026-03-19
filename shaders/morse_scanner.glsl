@@ -9,6 +9,8 @@
 uniform float uFrame;
 uniform float uDirection;
 uniform float uFadeRate;
+uniform float uSpeedScale;
+uniform float uMinSpeed;
 out vec4 fragColor;
 
 float hash(float n) {
@@ -30,7 +32,7 @@ void main()
     // Decide if this row scrolls this frame
     float row = float(coord.y);
     float roll = hash(row * 7.31 + uFrame * 0.17);
-    bool scrollThisFrame = (roll < speedNoise * speedMul);
+    bool scrollThisFrame = (roll < max(speedNoise * speedMul * uSpeedScale, uMinSpeed));
 
     if (scrollThisFrame) {
         // Edge column: write fresh signal
