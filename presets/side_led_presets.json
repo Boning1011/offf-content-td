@@ -1,0 +1,58 @@
+{
+  "presets": {
+    "Intro": {
+      "description": "起 — Slow, sparse, contemplative opening",
+      "Dotspeedscale": 0.25,
+      "Dotminspeed": 0.03,
+      "Inputprobability": 0.15,
+      "Colorfaderate": 0.05,
+      "Usecolor": true,
+      "Backupmode": false,
+      "Pixelprobability": 0.12,
+      "Cakillrate": 0.65,
+      "Caupdatebynframes": 10
+    },
+    "Build": {
+      "description": "承 — Growing energy, medium pace",
+      "Dotspeedscale": 0.6,
+      "Dotminspeed": 0.08,
+      "Inputprobability": 0.35,
+      "Colorfaderate": 0.15,
+      "Usecolor": true,
+      "Backupmode": false,
+      "Pixelprobability": 0.3,
+      "Cakillrate": 0.35,
+      "Caupdatebynframes": 5
+    },
+    "Climax": {
+      "description": "转 — Peak intensity, fast and dense",
+      "Dotspeedscale": 1.0,
+      "Dotminspeed": 0.2,
+      "Inputprobability": 0.7,
+      "Colorfaderate": 0.4,
+      "Usecolor": true,
+      "Backupmode": false,
+      "Pixelprobability": 0.6,
+      "Cakillrate": 0.1,
+      "Caupdatebynframes": 2
+    },
+    "Resolve": {
+      "description": "合 — Fading out, ethereal whites",
+      "Dotspeedscale": 0.35,
+      "Dotminspeed": 0.05,
+      "Inputprobability": 0.1,
+      "Colorfaderate": 0.7,
+      "Usecolor": true,
+      "Backupmode": false,
+      "Pixelprobability": 0.15,
+      "Cakillrate": 0.5,
+      "Caupdatebynframes": 8
+    }
+  },
+  "order": [
+    "Intro",
+    "Build",
+    "Climax",
+    "Resolve"
+  ]
+}
