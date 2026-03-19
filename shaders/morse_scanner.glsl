@@ -50,7 +50,7 @@ void main()
             // Probabilistic fade to white — only for non-black pixels
             float prevLum = dot(prev.rgb, vec3(0.299, 0.587, 0.114));
             if (prevLum > 0.01) {
-                float fadeChance = uFadeRate * 0.08;
+                float fadeChance = uFadeRate * 0.03;
                 float fadeTick = floor(uFrame / 4.0);
                 float fadeRoll = hash(float(coord.x) * 3.17 + float(coord.y) * 7.23 + fadeTick * 1.31);
                 if (fadeRoll < fadeChance) {
@@ -65,7 +65,7 @@ void main()
         // Probabilistic fade to white — only for non-black pixels
         float prevLum = dot(prev.rgb, vec3(0.299, 0.587, 0.114));
         if (prevLum > 0.01) {
-            float fadeChance = uFadeRate * 0.08;
+            float fadeChance = uFadeRate * 0.03;
             float fadeTick = floor(uFrame / 4.0);
             float fadeRoll = hash(float(coord.x) * 3.17 + float(coord.y) * 7.23 + fadeTick * 1.31);
             if (fadeRoll < fadeChance) {
