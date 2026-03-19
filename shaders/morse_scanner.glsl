@@ -8,6 +8,7 @@
 //             magnitude = speed multiplier (1.0 = normal)
 uniform float uFrame;
 uniform float uDirection;
+uniform float uFadeRate;
 out vec4 fragColor;
 
 float hash(float n) {
@@ -46,11 +47,25 @@ void main()
             // Shift pixel in scroll direction
             int offset = (dir < 0.0) ? 1 : -1;
             vec4 prev = texelFetch(sTD2DInputs[0], coord + ivec2(offset, 0), 0);
+            // Probabilistic fade to white — 90s pixel-style sudden jumps
+            float fadeChance = uFadeRate * 0.08;
+            float fadeTick = floor(uFrame / 4.0);
+            float fadeRoll = hash(float(coord.x) * 3.17 + float(coord.y) * 7.23 + fadeTick * 1.31);
+            if (fadeRoll < fadeChance) {
+                prev.rgb = mix(prev.rgb, vec3(1.0), 0.25);
+            }
             fragColor = TDOutputSwizzle(prev);
         }
     } else {
         // Don't scroll: hold previous frame
         vec4 prev = texelFetch(sTD2DInputs[0], coord, 0);
+        // Probabilistic fade to white — 90s pixel-style sudden jumps
+        float fadeChance = uFadeRate * 0.08;
+        float fadeTick = floor(uFrame / 4.0);
+        float fadeRoll = hash(float(coord.x) * 3.17 + float(coord.y) * 7.23 + fadeTick * 1.31);
+        if (fadeRoll < fadeChance) {
+            prev.rgb = mix(prev.rgb, vec3(1.0), 0.25);
+        }
         fragColor = TDOutputSwizzle(prev);
     }
 }
