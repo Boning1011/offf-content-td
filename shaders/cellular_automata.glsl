@@ -41,13 +41,15 @@ void main()
     );
 
     int neighbors = 0;
-    vec3 neighborColorSum = vec3(0.0);
+    vec3 neighborColor1 = vec3(0.0);
+    vec3 neighborColor2 = vec3(0.0);
 
     for (int i = 0; i < 8; i++) {
         vec4 s = texture(sTD2DInputs[0], uv + offsets[i]);
         if (s.a > 0.9) {
             neighbors++;
-            neighborColorSum += s.rgb;
+            if (neighbors == 1) neighborColor1 = s.rgb;
+            else if (neighbors == 2) neighborColor2 = s.rgb;
         }
     }
 
@@ -72,8 +74,8 @@ void main()
         // dead -> alive if 2 neighbors
         if (neighbors == 2 && rand > killRate) {
             resultState = 1.0;
-            // inherit average color from alive neighbors
-            resultColor = neighborColorSum / 2.0;
+            // randomly inherit one parent's color (sharp territorial boundaries)
+            resultColor = (rand > 0.5 + killRate * 0.5) ? neighborColor1 : neighborColor2;
         } else {
             resultState = 0.0;
             resultColor = vec3(0.0);
