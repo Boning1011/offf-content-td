@@ -1,14 +1,20 @@
 """
-CHOP Execute — switch Side_LED_ALL preset based on scene index.
+CHOP Execute - switch Side_LED_ALL preset based on scene index.
 Watches null_scene_index channel (integer 0..3).
+Reads parameter values from switch_preset DAT and applies them.
 """
 
-SCENE_TO_PRESET = {
-	0: 'Intro',
-	1: 'Build',
-	2: 'Climax',
-	3: 'Resolve',
-}
+PRESET_NAMES = {0: 'Intro', 1: 'Build', 2: 'Climax', 3: 'Resolve'}
+
+def _apply_from_table(comp):
+	table = comp.op('switch_preset')
+	for row in range(1, table.numRows):
+		pname = table[row, 'param'].val
+		pval = table[row, 'value'].val
+		try:
+			setattr(comp.par, pname, float(pval))
+		except:
+			pass
 
 def onOffToOn(channel, sampleIndex, val, prev):
 	return
@@ -24,10 +30,9 @@ def whileOff(channel, sampleIndex, val, prev):
 
 def onValueChange(channel, sampleIndex, val, prev):
 	idx = int(round(val))
-	preset = SCENE_TO_PRESET.get(idx)
+	comp = me.parent()
+	preset = PRESET_NAMES.get(idx)
 	if preset:
-		comp = me.parent()
 		comp.par.Preset.val = preset
-		mgr = mod(comp.op('preset_manager'))
-		mgr.apply_preset(comp, preset)
+		_apply_from_table(comp)
 	return
