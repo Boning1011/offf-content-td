@@ -78,4 +78,5 @@ void main() {
     bright[id] = br;
     scolor[id] = sc;
     pdrag[id] = pd;
+    Color[id] = vec4(sc * br, 1.0);
 }
