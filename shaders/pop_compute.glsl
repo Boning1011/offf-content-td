@@ -14,6 +14,7 @@ uniform float uNumRows;     // 1152
 uniform float uFrame;
 uniform float uDragCurve;     // velocity-dependent drag exponent (higher = drag fades faster at low speed)
 uniform float uHueDragOffset; // drag difference: positive = cool hues travel further
+uniform float uLumInfluence;  // how much signal brightness affects speed & drag (0=none, 1=full)
 
 // PCG-style integer hash for uncorrelated random values
 uint pcg(uint v) {
@@ -61,21 +62,27 @@ void main() {
         float r1 = rand(id * 3u + 1u + frame * 7919u);
         float r2 = rand(id * 3u + 2u + frame * 7919u);
 
-        // Speed distribution
+        // Signal luminance from raw spawn color (before boost)
+        float signalLum = dot(sc, vec3(0.299, 0.587, 0.114));
+
+        // Speed: brighter signal → faster launch
+        float lumSpeedMul = mix(1.0 - uLumInfluence, 1.0, signalLum);
         float speedMul = 0.4 + pow(r0, 0.3) * 1.6;
-        v = vec3(dir * uInitSpeed * speedMul, 0.0, 0.0);
+        v = vec3(dir * uInitSpeed * speedMul * lumSpeedMul, 0.0, 0.0);
 
         // Brightness: mostly bright, some dim
         br = 0.3 + 0.7 * pow(r1, 0.3);
 
-        // Get color from the inherited scolor attribute (set by birth sampler)
+        // Boost color for LED visibility
         sc = clamp(sc * 3.0, 0.0, 1.0);
 
         // Base per-particle drag with small random spread
         pd = uDrag - r2 * uDragSpread;
 
+        // Luminance-based drag: brighter signal → higher pd (travels further)
+        pd += signalLum * uLumInfluence * 0.01;
+
         // Hue-based drag offset: warm hues (red) vs cool hues (blue)
-        // hueFactor: ~0 for red/warm, ~1 for blue/cool
         float hue = rgbToHue(sc);
         float hueFactor = smoothstep(0.1, 0.5, hue) - smoothstep(0.75, 0.95, hue);
         pd += hueFactor * uHueDragOffset;
