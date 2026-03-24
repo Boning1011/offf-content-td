@@ -4,6 +4,8 @@
 //
 // Sampler 0: sSignalL — for spawn color sampling
 // Sampler 1: sSignalR — for spawn color sampling
+// Sampler 2: sNoise   — spatial noise multiplied onto init speed
+// Sampler 3: sSizeRamp — user-tuned ramp for particle size distribution
 
 uniform float uInitSpeed;
 uniform float uDrag;
@@ -49,6 +51,7 @@ void main() {
     float br = TDIn_bright().x;
     vec3 sc  = TDIn_scolor().xyz;
     float pd = TDIn_pdrag().x;
+    float ps = TDIn_psize().x;
 
     bool isNew = (abs(v.x) < 0.001 && br < 0.001);
 
@@ -65,10 +68,18 @@ void main() {
         // Signal luminance from raw spawn color (before boost)
         float signalLum = dot(sc, vec3(0.299, 0.587, 0.114));
 
-        // Speed: brighter signal → faster launch
+        // Noise modulation on init speed: sample spatial noise at source position
+        float uvY = (pos.y + 0.5) / uNumRows;
+        float noiseMul = textureLod(sNoise, vec2(0.5, uvY), 0.0).r;
+
+        // Speed: noise × lum influence × random spread
         float lumSpeedMul = mix(1.0 - uLumInfluence, 1.0, signalLum);
         float speedMul = 0.4 + pow(r0, 0.3) * 1.6;
-        v = vec3(dir * uInitSpeed * speedMul * lumSpeedMul, 0.0, 0.0);
+        v = vec3(dir * uInitSpeed * speedMul * lumSpeedMul * noiseMul, 0.0, 0.0);
+
+        // Particle size from user-tuned ramp: random value → ramp lookup
+        float r3 = rand(id * 4u + 3u + frame * 7919u);
+        ps = textureLod(sSizeRamp, vec2(r3, 0.5), 0.0).r;
 
         // Brightness: mostly bright, some dim
         br = 0.3 + 0.7 * pow(r1, 0.3);
@@ -109,5 +120,6 @@ void main() {
     bright[id] = br;
     scolor[id] = sc;
     pdrag[id] = pd;
+    psize[id] = ps;
     Color[id] = vec4(sc, br);
 }
