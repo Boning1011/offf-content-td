@@ -11,9 +11,6 @@ uniform float uDirection;
 uniform float uFadeRate;
 uniform float uSpeedScale;
 uniform float uMinSpeed;
-uniform float uDragMin;
-uniform float uDragCurve;
-uniform float uEntrySpeed;
 out vec4 fragColor;
 
 float hash(float n) {
