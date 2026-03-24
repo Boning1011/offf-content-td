@@ -51,7 +51,7 @@ void main() {
     float br = TDIn_bright().x;
     vec3 sc  = TDIn_scolor().xyz;
     float pd = TDIn_pdrag().x;
-    float ps = TDIn_psize().x;
+    float ps = TDIn_PointScale().x;
 
     bool isNew = (abs(v.x) < 0.001 && br < 0.001);
 
@@ -120,6 +120,6 @@ void main() {
     bright[id] = br;
     scolor[id] = sc;
     pdrag[id] = pd;
-    psize[id] = ps;
+    PointScale[id] = ps;
     Color[id] = vec4(sc, br);
 }
