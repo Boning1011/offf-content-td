@@ -13,9 +13,15 @@ uniform float uWidth;       // 384
 uniform float uNumRows;     // 1152
 uniform float uFrame;
 
-float hash(float n) {
-    float x = fract(sin(n) * 43758.5453);
-    return fract(sin(x * 91.3458 + n * 47.123) * 27183.6142);
+// PCG-style integer hash for uncorrelated random values
+uint pcg(uint v) {
+    uint state = v * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+float rand(uint seed) {
+    return float(pcg(seed)) / 4294967295.0;
 }
 
 void main() {
@@ -31,15 +37,14 @@ void main() {
     bool isNew = (abs(v.x) < 0.001 && br < 0.001);
 
     if (isNew) {
-        // Newly born particle — pos already set by Particle POP at source point
-        // Determine direction from x position
         bool fromRight = (pos.x > 190.0);
         float dir = fromRight ? -1.0 : 1.0;
 
-        float fid = float(id);
-        float r0 = hash(fid * 7.0 + uFrame * 0.317);
-        float r1 = hash(fid * 19.0 + uFrame * 0.937);
-        float r2 = hash(fid * 29.0 + uFrame * 1.153);
+        // Each random value uses a different seed offset for full decorrelation
+        uint frame = uint(uFrame);
+        float r0 = rand(id * 3u + 0u + frame * 7919u);
+        float r1 = rand(id * 3u + 1u + frame * 7919u);
+        float r2 = rand(id * 3u + 2u + frame * 7919u);
 
         // Long-tail speed distribution
         float speedMul = 0.4 + pow(r0, 0.3) * 1.6;
@@ -48,8 +53,8 @@ void main() {
         // Brightness: mostly bright, some dim
         br = 0.3 + 0.7 * pow(r1, 0.3);
 
-        // Per-particle drag
-        pd = uDrag - pow(r2, 2.0) * uDragSpread;
+        // Per-particle drag: wide spread for varied stopping distances
+        pd = uDrag - r2 * uDragSpread;
         pd = clamp(pd, 0.9, 0.9999);
 
         // Get color from the inherited scolor attribute (set by birth sampler)
