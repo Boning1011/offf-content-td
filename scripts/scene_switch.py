@@ -1,10 +1,10 @@
 """
 CHOP Execute - switch Side_LED_ALL preset based on scene index.
-Watches null_scene_index channel (integer 0..3).
+Watches null_scene_index channel (integer 0..2).
 Reads parameter values from switch_preset DAT and applies them.
 """
 
-PRESET_NAMES = {0: 'Intro', 1: 'Build', 2: 'Climax', 3: 'Resolve'}
+PRESET_NAMES = {0: 'Mid Speed, Mid Density', 1: 'Fast Speed, High Density', 2: 'Slow Speed, Mid Density'}
 
 def _apply_from_table(comp):
 	table = comp.op('switch_preset')

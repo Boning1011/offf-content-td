@@ -1,6 +1,6 @@
 # Parameter Execute callbacks for Side_LED_ALL preset system
 
-PRESET_MAP = {'Intro': 0, 'Build': 1, 'Climax': 2, 'Resolve': 3}
+PRESET_MAP = {'Mid Speed, Mid Density': 0, 'Fast Speed, High Density': 1, 'Slow Speed, Mid Density': 2}
 
 def _apply_table(comp):
 	table = comp.op('switch_preset')
