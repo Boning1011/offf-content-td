@@ -1,7 +1,8 @@
-// Brian's Brain CA with color propagation — V2: vertical spacing (skip every other row)
-// Input 0: previous state (feedback) — RGB=color, A=state (1.0 alive, 0.5 dying, 0.0 dead)
+// Brian's Brain CA with color propagation - V2: vertical spacing (skip every other row)
+// Input 0: previous state (feedback) - RGB=color, A=state (1.0 alive, 0.5 dying, 0.0 dead)
 // Input 1: live input (bright pixels force alive, color inherited)
 // Input 2: control (R=kill rate, G=frame interval, B=frame counter)
+uniform float uCaFade;
 out vec4 fragColor;
 
 float hash(vec2 p, float seed) {
@@ -49,15 +50,10 @@ void main()
     );
 
     int neighbors = 0;
-    vec3 neighborColor1 = vec3(0.0);
-    vec3 neighborColor2 = vec3(0.0);
-
     for (int i = 0; i < 8; i++) {
         vec4 s = texture(sTD2DInputs[0], uv + offsets[i]);
         if (s.a > 0.9) {
             neighbors++;
-            if (neighbors == 1) neighborColor1 = s.rgb;
-            else if (neighbors == 2) neighborColor2 = s.rgb;
         }
     }
 
@@ -71,26 +67,27 @@ void main()
     vec3 resultColor;
 
     if (state > 0.9) {
-        // alive -> dying: keep color
+        // alive -> dying: fade color
         resultState = 0.5;
-        resultColor = color;
+        resultColor = color * uCaFade;
     } else if (state > 0.3) {
-        // dying -> dead: keep color (fades visually since state dims)
+        // dying -> dead
         resultState = 0.0;
-        resultColor = color;
+        resultColor = vec3(0.0);
     } else {
         // dead -> alive if 2 neighbors
         if (neighbors == 2 && rand > killRate) {
             resultState = 1.0;
-            // randomly inherit one parent's color (sharp territorial boundaries)
-            resultColor = (rand > 0.5 + killRate * 0.5) ? neighborColor1 : neighborColor2;
+            // Color comes entirely from the live input at this position.
+            // This ties CA brightness to the actual input signal -- no amplification.
+            resultColor = texture(sTD2DInputs[1], uv).rgb;
         } else {
             resultState = 0.0;
             resultColor = vec3(0.0);
         }
     }
 
-    // Input override: force alive with input color
+    // Input override: force alive with input color (takes priority)
     vec4 inputSample = texture(sTD2DInputs[1], uv);
     float input_lum = dot(inputSample.rgb, vec3(0.299, 0.587, 0.114));
     if (input_lum > 0.5) {
