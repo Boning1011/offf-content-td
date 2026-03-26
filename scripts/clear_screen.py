@@ -1,33 +1,28 @@
 """
-Clear Screen callback for Side_LED_Effect TOX.
-Resets all feedback TOPs (morse_fb, morse_fb1, ca_feedback).
-Attach to a parameterexecuteDAT watching '..' for 'Clearscreen' pulse.
+Clear Screen - resets all feedback TOPs found anywhere inside this component.
 """
 
-FEEDBACK_NODES = ['morse_fb', 'morse_fb1', 'ca_feedback']
-
 def onPulse(par):
-	if par.name == 'Clearscreen':
-		comp = par.owner
-		for name in FEEDBACK_NODES:
-			node = comp.op(name)
-			if node:
-				node.par.resetpulse.pulse()
+    if par.name == 'Clearscreen':
+        comp = me.parent()
+        for fb in comp.findChildren(type=TOP):
+            if fb.type == 'feedback':
+                fb.par.resetpulse.pulse()
 
 def onValueChange(par, prev, val):
-	return
+    return
 
 def onValuesChanged(changes):
-	return
+    return
 
 def onExpressionChange(par, val, prev):
-	return
+    return
 
 def onExportChange(par, val, prev):
-	return
+    return
 
 def onEnableChange(par, val, prev):
-	return
+    return
 
 def onModeChange(par, val, prev):
-	return
+    return
