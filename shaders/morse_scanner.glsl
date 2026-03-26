@@ -124,9 +124,7 @@ void main()
     if (anyArrives) {
         fragColor = TDOutputSwizzle(arrivingPixel);
     } else if (selfMoves) {
-        // Ghost: dim once, set alpha just above occupied threshold
-        // so it stays visible but almost never moves again (no compounding decay)
-        fragColor = TDOutputSwizzle(vec4(self.rgb * 0.5, 0.02));
+        fragColor = TDOutputSwizzle(vec4(0.0));
     } else if (selfOccupied) {
         fragColor = TDOutputSwizzle(self);
     } else {
