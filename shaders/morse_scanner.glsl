@@ -6,7 +6,7 @@
 // Three drag layers (additive):
 //   1. Positional drag (uDrag): all pixels slow down further from entry
 //   2. Brightness drag (uBrightDrag): dark pixels get extra drag
-//   3. Hue drag (uHueDrag): per-row, from entry signal hue (hue 0=red fastest, 0.5=cyan slowest)
+//   3. Hue stride (uHueStride): per-row, entry signal hue scales stride (higher hue = bigger jumps)
 
 uniform float uFrame;
 uniform float uDirection;
@@ -15,7 +15,7 @@ uniform float uSpeedVar;    // random luminance jitter at birth
 uniform float uRhythm;
 uniform float uStride;
 uniform float uBrightDrag;  // brightness-based extra drag (1-5 range, 0 = off)
-uniform float uHueDrag;     // hue-based extra drag (1-5 range, 0 = off)
+uniform float uHueStride;   // hue-based stride multiplier (0 = off, 1-5 = hue scales stride)
 uniform float uThreshold;   // input luminance threshold (0-1, below = black)
 
 out vec4 fragColor;
@@ -31,6 +31,14 @@ float rand(uint x, uint y, uint z) {
     return float(h) * (1.0 / 4294967295.0);
 }
 
+// Box-Muller gaussian: returns value with mean=center, σ=center*0.3
+float gaussian(float center, uint seed1, uint seed2) {
+    float u1 = max(rand(seed1, seed2, 7919u), 0.0001);
+    float u2 = rand(seed1, seed2, 4651u);
+    float g = sqrt(-2.0 * log(u1)) * cos(6.2831853 * u2);
+    return max(center + g * center * 0.3, 0.0);
+}
+
 float rgb2hue(vec3 c) {
     float mx = max(c.r, max(c.g, c.b));
     float mn = min(c.r, min(c.g, c.b));
@@ -43,10 +51,9 @@ float rgb2hue(vec3 c) {
     return h / 6.0;
 }
 
-float calcDrag(float normDist, float alpha, float rowHue, float drag, float brightDrag, float hueDrag) {
+float calcDrag(float normDist, float alpha, float drag, float brightDrag) {
     float brightPart = (1.0 - alpha) * brightDrag;
-    float huePart = rowHue * hueDrag;
-    return exp(-normDist * (drag + brightPart + huePart));
+    return exp(-normDist * (drag + brightPart));
 }
 
 void main()
@@ -83,18 +90,26 @@ void main()
     vec4 self = texelFetch(sTD2DInputs[0], coord, 0);
     bool selfOccupied = self.a > 0.01;
 
-    uint bucket = uint(floor(uFrame / max(uRhythm, 1.0)));
+    // Per-row rhythm/stride via gaussian distribution
+    // Meta-bucket (slow clock): re-rolls rhythm/stride every 3 global buckets
+    uint globalBucket = uint(floor(uFrame / max(uRhythm, 1.0)));
+    uint metaBucket = globalBucket / 3u;
+
+    float rowRhythm = max(gaussian(uRhythm, uint(coord.y), metaBucket), 1.0);
+    float rowStride = gaussian(uStride * 0.4, uint(coord.y), metaBucket + 50000u);
+    // Hue scales stride: high hue rows jump further
+    rowStride *= 1.0 + rowHue * uHueStride;
+
+    uint bucket = uint(floor(uFrame / rowRhythm));
+    int myStride = clamp(int(round(rowStride)), 0, int(uStride));
 
     float selfNorm = (dir < 0.0)
         ? (res.x - 1.0 - float(coord.x)) / res.x
         : float(coord.x) / res.x;
-    float selfDrag = calcDrag(selfNorm, self.a, rowHue, uDrag, uBrightDrag, uHueDrag);
-
-    float strideRand = rand(uint(coord.x), uint(coord.y), bucket * 3u + 1u);
-    int myStride = max(int(ceil(strideRand * uStride)), 1);
+    float selfDrag = calcDrag(selfNorm, self.a, uDrag, uBrightDrag);
 
     float selfRoll = rand(uint(coord.x), uint(coord.y), bucket);
-    bool selfWantsMove = selfOccupied && (selfRoll < selfDrag);
+    bool selfWantsMove = selfOccupied && (myStride > 0) && (selfRoll < selfDrag);
 
     ivec2 downCoord = coord - ivec2(dirI * myStride, 0);
     downCoord.x = clamp(downCoord.x, 0, int(res.x) - 1);
@@ -104,7 +119,7 @@ void main()
     float downNorm = (dir < 0.0)
         ? (res.x - 1.0 - float(downCoord.x)) / res.x
         : float(downCoord.x) / res.x;
-    float downDrag = calcDrag(downNorm, downstream.a, rowHue, uDrag, uBrightDrag, uHueDrag);
+    float downDrag = calcDrag(downNorm, downstream.a, uDrag, uBrightDrag);
     float downRoll = rand(uint(downCoord.x), uint(downCoord.y), bucket);
     bool downWantsMove = downOccupied && (downRoll < downDrag);
     bool canLeave = !downOccupied || downWantsMove;
@@ -115,28 +130,22 @@ void main()
     bool anyArrives = false;
     vec4 arrivingPixel = vec4(0.0);
 
-    for (int s = 1; s <= int(uStride); s++) {
-        ivec2 upCoord = coord + ivec2(dirI * s, 0);
-        if (upCoord.x < 0 || upCoord.x >= int(res.x)) continue;
-
+    // Upstream check: same row = same stride, only check exact stride distance
+    ivec2 upCoord = coord + ivec2(dirI * myStride, 0);
+    if (upCoord.x >= 0 && upCoord.x < int(res.x)) {
         vec4 up = texelFetch(sTD2DInputs[0], upCoord, 0);
-        if (up.a < 0.01) continue;
+        if (up.a > 0.01) {
+            float upNorm = (dir < 0.0)
+                ? (res.x - 1.0 - float(upCoord.x)) / res.x
+                : float(upCoord.x) / res.x;
+            float upDrag = calcDrag(upNorm, up.a, uDrag, uBrightDrag);
+            float upRoll = rand(uint(upCoord.x), uint(upCoord.y), bucket);
+            bool upWantsMove = (upRoll < upDrag);
 
-        float upStrideRand = rand(uint(upCoord.x), uint(upCoord.y), bucket * 3u + 1u);
-        int upStride = max(int(ceil(upStrideRand * uStride)), 1);
-        if (upStride != s) continue;
-
-        float upNorm = (dir < 0.0)
-            ? (res.x - 1.0 - float(upCoord.x)) / res.x
-            : float(upCoord.x) / res.x;
-        float upDrag = calcDrag(upNorm, up.a, rowHue, uDrag, uBrightDrag, uHueDrag);
-        float upRoll = rand(uint(upCoord.x), uint(upCoord.y), bucket);
-        bool upWantsMove = (upRoll < upDrag);
-
-        if (upWantsMove && (!selfOccupied || selfMoves)) {
-            anyArrives = true;
-            arrivingPixel = up;
-            break;
+            if (upWantsMove && (!selfOccupied || selfMoves)) {
+                anyArrives = true;
+                arrivingPixel = up;
+            }
         }
     }
 
